@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시스템 리소스 모니터 | System Resource Monitor</title>
+    <meta name="description" content="실시간 시스템 리소스 모니터링 대시보드 - CPU, 메모리, 디스크, 네트워크, GPU">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- PDF 생성 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">📊</span>
+                    <h1>System Resource Monitor</h1>
+                </div>
+                <div class="header-info">
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">연결 중...</span>
+                    </div>
+                    <div class="current-time" id="currentTime"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 시스템 정보 배너 -->
+        <section class="system-banner" id="systemBanner">
+            <div class="system-info-grid">
+                <div class="system-info-item">
+                    <span class="label">호스트</span>
+                    <span class="value" id="hostname">-</span>
+                </div>
+                <div class="system-info-item">
+                    <span class="label">플랫폼</span>
+                    <span class="value" id="platform">-</span>
+                </div>
+                <div class="system-info-item">
+                    <span class="label">가동 시간</span>
+                    <span class="value" id="uptime">-</span>
+                </div>
+                <div class="system-info-item">
+                    <span class="label">프로세서</span>
+                    <span class="value" id="processor">-</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 메인 대시보드 -->
+        <main class="dashboard">
+            <!-- 주요 메트릭 카드 -->
+            <section class="metrics-row">
+                <!-- CPU 카드 -->
+                <div class="metric-card" id="cpuCard">
+                    <div class="card-header">
+                        <span class="card-icon">🖥️</span>
+                        <h2>CPU</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="gauge-container">
+                            <canvas id="cpuGauge"></canvas>
+                            <div class="gauge-value">
+                                <span class="value" id="cpuPercent">0</span>
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-details">
+                            <div class="detail-item">
+                                <span class="label">주파수</span>
+                                <span class="value" id="cpuFreq">0 MHz</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">코어</span>
+                                <span class="value" id="cpuCores">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 메모리 카드 -->
+                <div class="metric-card" id="memoryCard">
+                    <div class="card-header">
+                        <span class="card-icon">💾</span>
+                        <h2>메모리</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="gauge-container">
+                            <canvas id="memoryGauge"></canvas>
+                            <div class="gauge-value">
+                                <span class="value" id="memoryPercent">0</span>
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-details">
+                            <div class="detail-item">
+                                <span class="label">사용</span>
+                                <span class="value" id="memoryUsed">0 GB</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">총량</span>
+                                <span class="value" id="memoryTotal">0 GB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 디스크 카드 -->
+                <div class="metric-card" id="diskCard">
+                    <div class="card-header">
+                        <span class="card-icon">💿</span>
+                        <h2>디스크</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="gauge-container">
+                            <canvas id="diskGauge"></canvas>
+                            <div class="gauge-value">
+                                <span class="value" id="diskPercent">0</span>
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-details">
+                            <div class="detail-item">
+                                <span class="label">사용</span>
+                                <span class="value" id="diskUsed">0 GB</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">총량</span>
+                                <span class="value" id="diskTotal">0 GB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 네트워크 카드 -->
+                <div class="metric-card" id="networkCard">
+                    <div class="card-header">
+                        <span class="card-icon">🌐</span>
+                        <h2>네트워크</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="network-stats">
+                            <div class="net-stat upload">
+                                <span class="direction">↑</span>
+                                <div class="stat-info">
+                                    <span class="value" id="netUpload">0</span>
+                                    <span class="unit">KB/s</span>
+                                </div>
+                            </div>
+                            <div class="net-stat download">
+                                <span class="direction">↓</span>
+                                <div class="stat-info">
+                                    <span class="value" id="netDownload">0</span>
+                                    <span class="unit">KB/s</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="metric-details">
+                            <div class="detail-item">
+                                <span class="label">송신</span>
+                                <span class="value" id="netSent">0 MB</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">수신</span>
+                                <span class="value" id="netRecv">0 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 차트 섹션 -->
+            <section class="charts-section">
+                <!-- CPU 히스토리 차트 -->
+                <div class="chart-card wide">
+                    <div class="card-header">
+                        <span class="card-icon">📈</span>
+                        <h2>CPU 사용률 추이</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 메모리 & 디스크 I/O 차트 -->
+                <div class="chart-card">
+                    <div class="card-header">
+                        <span class="card-icon">📊</span>
+                        <h2>메모리 사용률 추이</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-header">
+                        <span class="card-icon">📉</span>
+                        <h2>네트워크 트래픽</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="networkChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GPU 섹션 (GPU가 있는 경우에만 표시) -->
+            <section class="gpu-section" id="gpuSection" style="display: none;">
+                <div class="chart-card wide">
+                    <div class="card-header">
+                        <span class="card-icon">🎮</span>
+                        <h2>GPU 정보</h2>
+                    </div>
+                    <div class="gpu-grid" id="gpuGrid">
+                        <!-- GPU 카드가 동적으로 추가됨 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 코어별 CPU 사용률 -->
+            <section class="cores-section">
+                <div class="chart-card wide">
+                    <div class="card-header">
+                        <span class="card-icon">⚙️</span>
+                        <h2>코어별 CPU 사용률</h2>
+                    </div>
+                    <div class="cores-grid" id="coresGrid">
+                        <!-- 코어별 바가 동적으로 추가됨 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 디스크 파티션 -->
+            <section class="partitions-section">
+                <div class="chart-card wide">
+                    <div class="card-header">
+                        <span class="card-icon">📁</span>
+                        <h2>디스크 파티션</h2>
+                    </div>
+                    <div class="partitions-grid" id="partitionsGrid">
+                        <!-- 파티션 정보가 동적으로 추가됨 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 상위 프로세스 -->
+            <section class="processes-section">
+                <div class="chart-card wide">
+                    <div class="card-header">
+                        <span class="card-icon">📋</span>
+                        <h2>상위 프로세스 (CPU 사용률 기준)</h2>
+                    </div>
+                    <div class="process-table-container">
+                        <table class="process-table" id="processTable">
+                            <thead>
+                                <tr>
+                                    <th>PID</th>
+                                    <th>프로세스명</th>
+                                    <th>CPU %</th>
+                                    <th>메모리 %</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="processTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 녹화 컨트롤 패널 -->
+        <div class="control-panel">
+            <div class="recording-status" id="recordingStatus">
+                <div class="recording-info">
+                    <span class="recording-dot" id="recordingDot"></span>
+                    <span class="recording-text" id="recordingText">대기 중</span>
+                </div>
+                <div class="recording-time" id="recordingTime">00:00 / 05:00</div>
+            </div>
+            <div class="control-buttons">
+                <button class="btn btn-primary" id="startRecordingBtn">
+                    <span class="btn-icon">▶</span>
+                    <span class="btn-text">5분 녹화 시작</span>
+                </button>
+                <button class="btn btn-success" id="downloadPdfBtn" disabled>
+                    <span class="btn-icon">📄</span>
+                    <span class="btn-text">PDF 다운로드</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>System Resource Monitor © 2026</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
